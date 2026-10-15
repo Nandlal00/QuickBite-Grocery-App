@@ -30,9 +30,15 @@ namespace GroceryStoreApp.Controllers
 
         public IActionResult Index(string? category, string? search, string? sort)
         {
+            try
+            {
+                _context.VisitorLogs.Add(new VisitorLog { IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1" });
+                _context.SaveChanges();
+            }
+            catch { }
+
             var products = _context.Products.AsEnumerable();
 
-            // Algorithmic Trie Prefix Search (Requirement 4 & 8)
             if (!string.IsNullOrEmpty(search))
             {
                 var matchingIds = _searchTrie.SearchPrefix(search);
@@ -44,20 +50,19 @@ namespace GroceryStoreApp.Controllers
                 products = products.Where(p => p.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
             }
 
-            // Advanced Sorting Algorithm (Requirement 8)
             products = sort switch
             {
-                "price_low" => products.OrderBy(p => p.Price),
-                "price_high" => products.OrderByDescending(p => p.Price),
+                "price-low" => products.OrderBy(p => p.Price),
+                "price-high" => products.OrderByDescending(p => p.Price),
                 "rating" => products.OrderByDescending(p => p.Rating),
-                "popularity" => products.OrderByDescending(p => p.SalesCount),
                 _ => products.OrderBy(p => p.Id)
             };
 
             ViewBag.SelectedCategory = category ?? "All";
             ViewBag.SearchQuery = search ?? "";
-            ViewBag.CurrentSort = sort ?? "default";
+            ViewBag.SelectedSort = sort ?? "";
             ViewBag.Categories = new List<string> { "All", "Fruits", "Vegetables", "Dairy", "Grocery", "Snacks" };
+            ViewBag.Coupons = _context.Coupons.ToList();
 
             return View(products.ToList());
         }
@@ -76,35 +81,34 @@ namespace GroceryStoreApp.Controllers
             return Json(new { success = true });
         }
 
-        // Unified Login Screen Handler (Requirement 9)
         [HttpPost]
-        public async Task<IActionResult> UnifiedLogin(string emailOrPhone, string password)
+        public async Task<IActionResult> LoginUser(string identifier, string password)
         {
-            // Predefined Admin Credentials Check
-            if (emailOrPhone.Trim().Equals("admin", StringComparison.OrdinalIgnoreCase) && password == "admin123")
+            if ((identifier == "admin" || identifier == "admin@quickbite.com") && password == "admin123")
             {
                 Response.Cookies.Append("AdminSession", "Authenticated", new CookieOptions { Expires = DateTimeOffset.UtcNow.AddHours(8), Path = "/" });
-                return Json(new { success = true, isAdmin = true, redirectUrl = "/Admin/Dashboard" });
+                await SignInUserAsync("99999", "Admin");
+                return Json(new { success = true, isAdmin = true });
             }
 
-            var user = _context.Users.FirstOrDefault(u => u.Email == emailOrPhone || u.Phone == emailOrPhone);
+            var user = _context.Users.FirstOrDefault(u => u.Email == identifier || u.Phone == identifier);
             if (user == null || user.Password != password)
-                return Json(new { success = false, message = "Invalid credentials or password." });
+                return Json(new { success = false, message = "Invalid email/phone or password." });
 
             await SignInUserAsync(user.Id.ToString(), user.Name);
-            return Json(new { success = true, isAdmin = false, redirectUrl = "/Home/CustomerDashboard" });
+            return Json(new { success = true, isAdmin = false });
         }
 
-        private async Task SignInUserAsync(string userId, string userName)
+        private async Task SignInUserAsync(string id, string name)
         {
-            var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId), new(ClaimTypes.Name, userName) };
+            var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, id), new(ClaimTypes.Name, name) };
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)));
         }
 
         public async Task<IActionResult> LogoutUser()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             Response.Cookies.Delete("AdminSession", new CookieOptions { Path = "/" });
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Index");
         }
 
@@ -114,18 +118,18 @@ namespace GroceryStoreApp.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
             ViewBag.User = _context.Users.Find(userId);
-            ViewBag.SavedAddresses = _context.SavedAddresses.Where(a => a.UserId == userId).ToList();
-            ViewBag.Wishlist = _context.Products.Where(p => _context.WishlistItems.Any(w => w.UserId == userId && w.ProductId == p.Id)).ToList();
+            ViewBag.Orders = _context.Orders.Where(o => o.UserId == userId).OrderByDescending(o => o.Id).ToList();
+            ViewBag.Addresses = _context.SavedAddresses.Where(a => a.UserId == userId).ToList();
             return View();
         }
 
         [HttpPost]
-        public IActionResult SaveAddress(string label, string addressText)
+        public IActionResult SaveAddress(string label, string fullAddress)
         {
             if (!User.Identity?.IsAuthenticated ?? true) return Json(new { success = false });
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            _context.SavedAddresses.Add(new SavedAddress { UserId = userId, Label = label, AddressText = addressText });
+            _context.SavedAddresses.Add(new SavedAddress { UserId = userId, Label = label, FullAddress = fullAddress });
             _context.SaveChanges();
             return Json(new { success = true });
         }
@@ -135,7 +139,7 @@ namespace GroceryStoreApp.Controllers
         {
             var coupon = _context.Coupons.FirstOrDefault(c => c.Code.ToUpper() == code.ToUpper());
             if (coupon == null) return Json(new { success = false, message = "Invalid coupon." });
-            if (cartTotal < coupon.MinOrderAmount) return Json(new { success = false, message = $"Min order ₹{coupon.MinOrderAmount} required." });
+            if (cartTotal < coupon.MinOrderAmount) return Json(new { success = false, message = $"Minimum order ₹{coupon.MinOrderAmount} required." });
 
             decimal discount = Math.Round(cartTotal * (coupon.DiscountPercent / 100m), 2);
             return Json(new { success = true, discount, message = $"{coupon.DiscountPercent}% discount applied!" });
@@ -148,7 +152,7 @@ namespace GroceryStoreApp.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
             var orders = _context.Orders.Where(o => o.UserId == userId).OrderByDescending(o => o.Id)
-                .Select(o => new { id = o.Id, customerName = o.CustomerName, phone = o.Phone, address = o.Address, totalAmount = o.TotalAmount, status = o.Status, cartData = o.CartDataJson, createdAt = o.CreatedAt }).ToList();
+                .Select(o => new { id = o.Id, customerName = o.CustomerName, phone = o.Phone, address = o.Address, totalAmount = o.TotalAmount, status = o.Status, cartData = o.CartDataJson }).ToList();
 
             return Json(new { success = true, orders });
         }
@@ -161,15 +165,11 @@ namespace GroceryStoreApp.Controllers
 
             try
             {
-                var cartItems = JsonSerializer.Deserialize<List<CartItemDto>>(model.CartDataJson) ?? new();
-                foreach (var item in cartItems)
+                var items = JsonSerializer.Deserialize<List<CartItemDto>>(model.CartDataJson) ?? new();
+                foreach (var item in items)
                 {
                     var product = _context.Products.Find(item.Id);
-                    if (product != null)
-                    {
-                        product.Stock = Math.Max(0, product.Stock - item.Qty);
-                        product.SalesCount += item.Qty; // Increment for popularity sorting
-                    }
+                    if (product != null) product.Stock = Math.Max(0, product.Stock - item.Qty);
                 }
             }
             catch { }
@@ -178,12 +178,33 @@ namespace GroceryStoreApp.Controllers
             var orderId = new Random().Next(100000, 999999);
             model.CustomerName = $"#{orderId} - " + model.CustomerName;
             model.Status = "Processing";
-            model.CreatedAt = DateTime.UtcNow;
 
             _context.Orders.Add(model);
             _context.SaveChanges();
 
             return Json(new { success = true, orderId });
+        }
+
+        [HttpPost]
+        public IActionResult CancelOrder(int id)
+        {
+            if (!User.Identity?.IsAuthenticated ?? true) return Json(new { success = false, message = "Login required." });
+            var order = _context.Orders.Find(id);
+            if (order == null) return Json(new { success = false, message = "Order not found." });
+
+            if (order.Status != "Processing")
+                return Json(new { success = false, message = "Orders cannot be cancelled once packed or out for delivery." });
+
+            order.Status = "Cancelled";
+            _context.SaveChanges();
+            return Json(new { success = true, message = "Order successfully cancelled." });
+        }
+
+        [HttpGet]
+        public IActionResult GetActiveOperatingCities()
+        {
+            var cities = _context.OperatingCities.Where(c => c.IsActive).Select(c => c.Name).ToList();
+            return Json(cities);
         }
     }
 

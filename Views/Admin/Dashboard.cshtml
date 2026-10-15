@@ -3,10 +3,10 @@
     var orders = ViewBag.Orders as List<GroceryStoreApp.Models.OrderViewModel> ?? new();
     var products = ViewBag.Products as List<GroceryStoreApp.Models.Product> ?? new();
     var coupons = ViewBag.Coupons as List<GroceryStoreApp.Models.Coupon> ?? new();
-    decimal totalRevenue = ViewBag.TotalRevenue;
-    int completedOrders = ViewBag.CompletedOrders;
-    int activeOrdersCount = ViewBag.ActiveOrdersCount;
-    string topProduct = ViewBag.TopSellingProduct;
+    var cities = ViewBag.Cities as List<GroceryStoreApp.Models.OperatingCity> ?? new();
+    int totalVisitors = ViewBag.TotalVisitors ?? 0;
+    int totalCustomers = ViewBag.TotalCustomers ?? 0;
+    decimal totalRevenue = ViewBag.TotalRevenue ?? 0m;
 }
 
 <!DOCTYPE html>
@@ -21,158 +21,82 @@
     <style> body { font-family: 'Plus Jakarta Sans', sans-serif; } </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased">
-
-    <!-- Header Navbar -->
     <header class="bg-white border-b border-slate-100 shadow-sm sticky top-0 z-30">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <h1 class="text-lg font-extrabold text-slate-900"><i class="fa-solid fa-shield-halved text-emerald-600 mr-2"></i> Admin Analytics & Control Center</h1>
             <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
-                    <i class="fa-solid fa-shield-halved text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-lg font-extrabold tracking-tight text-slate-900">Admin Control Center</h1>
-                    <p class="text-xs text-emerald-600 font-semibold">QuickBite Mart Management</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <a href="/" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-store mr-2"></i> View Store</a>
-                <a href="/Admin/Logout" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2.5 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-right-from-bracket mr-2"></i> Logout</a>
+                <a href="/" class="bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm">View Store</a>
+                <a href="/Admin/Logout" class="bg-rose-50 text-rose-600 px-4 py-2.5 rounded-xl font-bold text-sm">Logout</a>
             </div>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
-        
-        <!-- Business Analytics Cards (Requirement 13) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl font-bold"><i class="fa-solid fa-indian-rupee-sign"></i></div>
-                <div><span class="text-xs text-slate-400 font-bold uppercase">Total Revenue</span><h3 class="text-xl font-extrabold text-slate-900">₹@totalRevenue.ToString("0.00")</h3></div>
+        <!-- Analytics Overview Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-6">
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"><span class="text-xs text-slate-400 font-bold">TOTAL REVENUE</span><h3 class="text-2xl font-extrabold text-emerald-600">₹@totalRevenue.ToString("0.00")</h3></div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"><span class="text-xs text-slate-400 font-bold">ORDERS RECEIVED</span><h3 class="text-2xl font-extrabold">@orders.Count</h3></div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"><span class="text-xs text-slate-400 font-bold">REGISTERED ACCOUNTS</span><h3 class="text-2xl font-extrabold">@totalCustomers</h3></div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"><span class="text-xs text-slate-400 font-bold">WEBSITE VISITORS</span><h3 class="text-2xl font-extrabold text-sky-600">@totalVisitors</h3></div>
+        </div>
+
+        <!-- Operating Cities Management Section -->
+        <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-extrabold text-slate-900"><i class="fa-solid fa-city text-emerald-600 mr-2"></i> Operating Cities Geofence</h3>
+                    <p class="text-xs text-slate-400 mt-1">Select and toggle active dark store cities. Unselected cities will see "We are coming soon here!".</p>
+                </div>
+                <form asp-action="AddCity" method="post" class="flex gap-2">
+                    <input type="text" name="cityName" required placeholder="New City Name..." class="bg-slate-100 border border-slate-200 rounded-2xl py-2 px-4 text-xs font-bold focus:outline-none" />
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-2xl text-xs font-bold shadow-md">Add City +</button>
+                </form>
             </div>
-            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl font-bold"><i class="fa-solid fa-box-open"></i></div>
-                <div><span class="text-xs text-slate-400 font-bold uppercase">Active Orders</span><h3 class="text-xl font-extrabold text-slate-900">@activeOrdersCount</h3></div>
-            </div>
-            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-2xl font-bold"><i class="fa-solid fa-circle-check"></i></div>
-                <div><span class="text-xs text-slate-400 font-bold uppercase">Completed Deliveries</span><h3 class="text-xl font-extrabold text-slate-900">@completedOrders</h3></div>
-            </div>
-            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl font-bold"><i class="fa-solid fa-fire"></i></div>
-                <div><span class="text-xs text-slate-400 font-bold uppercase">Top Selling Item</span><h3 class="text-xs font-extrabold text-slate-900 truncate max-w-[120px]">@topProduct</h3></div>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                @foreach (var city in cities)
+                {
+                    <div class="border rounded-2xl p-3 flex flex-col justify-between transition-all @(city.IsActive ? "bg-emerald-50/60 border-emerald-300" : "bg-slate-50 border-slate-200 opacity-60")">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-extrabold text-xs sm:text-sm text-slate-900">@city.Name</span>
+                            <form asp-action="DeleteCity" method="post">
+                                <input type="hidden" name="id" value="@city.Id" />
+                                <button type="submit" class="text-rose-500 text-[10px]"><i class="fa-solid fa-xmark"></i></button>
+                            </form>
+                        </div>
+                        <form asp-action="ToggleCityStatus" method="post">
+                            <input type="hidden" name="id" value="@city.Id" />
+                            <button type="submit" class="w-full py-1.5 rounded-xl text-[10px] font-bold @(city.IsActive ? "bg-emerald-600 text-white" : "bg-slate-300 text-slate-700")">
+                                @(city.IsActive ? "Active Store" : "Inactive")
+                            </button>
+                        </form>
+                    </div>
+                }
             </div>
         </div>
 
-        <!-- Orders Management Table with Live Status Update Dropdowns -->
-        <div class="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 shadow-sm">
-            <h3 class="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-emerald-600"></i> Customer Orders & Live Status Management</h3>
+        <!-- Orders Management -->
+        <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <h3 class="text-xl font-extrabold text-slate-900 mb-6"><i class="fa-solid fa-clock-rotate-left text-emerald-600 mr-2"></i> Live Orders & Status Management</h3>
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b border-slate-100 text-xs font-bold uppercase text-slate-400">
-                            <th class="pb-4">Order Reference & Customer</th>
-                            <th class="pb-4">Contact & Address</th>
-                            <th class="pb-4">Total Amount</th>
-                            <th class="pb-4">Live Status Control</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 text-sm">
-                        @if (orders.Any())
+                <table class="w-full text-left text-sm">
+                    <thead><tr class="border-b text-xs text-slate-400 uppercase"><th>Order & Customer</th><th>Phone & Address</th><th>Total</th><th>Status Control</th></tr></thead>
+                    <tbody class="divide-y">
+                        @foreach (var o in orders)
                         {
-                            foreach (var order in orders)
-                            {
-                                <tr class="hover:bg-slate-50/50">
-                                    <td class="py-4 pr-4"><span class="font-extrabold text-slate-900 block">@order.CustomerName</span></td>
-                                    <td class="py-4 pr-4">
-                                        <span class="font-semibold text-slate-700 block"><i class="fa-solid fa-phone text-xs text-emerald-600 mr-1"></i> @order.Phone</span>
-                                        <span class="text-xs text-slate-400 block mt-0.5"><i class="fa-solid fa-location-dot mr-1"></i> @order.Address</span>
-                                    </td>
-                                    <td class="py-4 pr-4 font-extrabold text-emerald-600">₹@order.TotalAmount.ToString("0.00")</td>
-                                    <td class="py-4">
-                                        <form asp-action="UpdateOrderStatus" method="post" class="flex items-center gap-2">
-                                            <input type="hidden" name="id" value="@order.Id" />
-                                            <select name="status" onchange="this.form.submit()" class="bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-emerald-500/20">
-                                                <option value="Processing" selected="@(order.Status == "Processing")">Processing</option>
-                                                <option value="Out for Delivery" selected="@(order.Status == "Out for Delivery")">Out for Delivery</option>
-                                                <option value="Completed" selected="@(order.Status == "Completed")">Completed</option>
-                                                <option value="Cancelled" selected="@(order.Status == "Cancelled")">Cancelled</option>
-                                            </select>
-                                        </form>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                        else
-                        {
-                            <tr><td colspan="4" class="py-12 text-center text-slate-400">No customer orders yet.</td></tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Add Coupon & Add Product Forms -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div class="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 shadow-sm">
-                <h3 class="text-lg font-extrabold text-slate-900 mb-6 flex items-center gap-2"><i class="fa-solid fa-ticket text-emerald-600"></i> Create Promo Coupon</h3>
-                <form asp-action="AddCoupon" method="post" class="space-y-4">
-                    <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Coupon Code</label><input type="text" name="Code" required placeholder="e.g. QUICK10" class="w-full bg-slate-100 border border-slate-200 rounded-2xl py-3 px-4 text-sm uppercase" /></div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Discount (%)</label><input type="number" name="DiscountPercent" required placeholder="10" class="w-full bg-slate-100 border border-slate-200 rounded-2xl py-3 px-4 text-sm" /></div>
-                        <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Min Order (₹)</label><input type="number" name="MinOrderAmount" required placeholder="199" class="w-full bg-slate-100 border border-slate-200 rounded-2xl py-3 px-4 text-sm" /></div>
-                    </div>
-                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-3.5 rounded-2xl font-bold shadow-md transition-all">Save Coupon Code 🎟️</button>
-                </form>
-            </div>
-
-            <div class="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 shadow-sm">
-                <h3 class="text-lg font-extrabold text-slate-900 mb-6 flex items-center gap-2"><i class="fa-solid fa-plus text-emerald-600"></i> Add Product & Stock (Requirement 11)</h3>
-                <form asp-action="AddProduct" method="post" enctype="multipart/form-data" class="space-y-4">
-                    <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Product Name</label><input type="text" name="Name" required placeholder="e.g. Fresh Tomatoes" class="w-full bg-slate-100 border border-slate-200 rounded-2xl py-3 px-4 text-sm" /></div>
-                    <div class="grid grid-cols-3 gap-2">
-                        <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Category</label><input type="text" name="Category" required placeholder="Vegetables" class="w-full bg-slate-100 border border-slate-200 rounded-2xl py-3 px-3 text-sm" /></div>
-                        <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Price (₹)</label><input type="number" step="0.01" name="Price" required placeholder="40.00" class="w-full bg-slate-100 border border-slate-200 rounded-2xl py-3 px-3 text-sm" /></div>
-                        <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Stock</label><input type="number" name="Stock" required placeholder="50" class="w-full bg-slate-100 border border-slate-200 rounded-2xl py-3 px-3 text-sm" /></div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Upload Desktop File</label><input type="file" name="imageFile" accept="image/*" class="w-full bg-slate-100 border border-slate-200 rounded-2xl py-2 px-3 text-xs text-slate-600" /></div>
-                        <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">OR External URL</label><input type="url" name="externalImageUrl" placeholder="https://..." class="w-full bg-slate-100 border border-slate-200 rounded-2xl py-2 px-3 text-xs" /></div>
-                    </div>
-                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-bold shadow-lg shadow-emerald-600/30 transition-all">Add Product 🚀</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Inventory & Low-Stock Alerts -->
-        <div class="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 shadow-sm">
-            <h3 class="text-lg font-extrabold text-slate-900 mb-6 flex items-center gap-2"><i class="fa-solid fa-boxes-stacked text-emerald-600"></i> Store Inventory & Stock Alerts</h3>
-            <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr class="border-b border-slate-100 text-xs font-bold uppercase text-slate-400"><th class="pb-3">Product</th><th class="pb-3">Category</th><th class="pb-3">Price</th><th class="pb-3">Stock Status</th><th class="pb-3 text-right">Action</th></tr></thead>
-                    <tbody class="divide-y divide-slate-100 text-sm">
-                        @foreach (var prod in products)
-                        {
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="py-3 pr-3 flex items-center gap-3">
-                                    <img src="@prod.ImageUrl" class="w-10 h-10 rounded-xl object-cover bg-slate-100" />
-                                    <span class="font-bold text-slate-900">@prod.Name</span>
-                                </td>
-                                <td class="py-3 font-semibold text-slate-600">@prod.Category</td>
-                                <td class="py-3 font-extrabold text-emerald-600">₹@prod.Price.ToString("0.00")</td>
-                                <td class="py-3">
-                                    @if (prod.Stock <= 5)
-                                    {
-                                        <span class="bg-rose-50 text-rose-600 border border-rose-200 px-3 py-1 rounded-full text-xs font-bold">⚠️ Low Stock (@prod.Stock)</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full text-xs font-bold">In Stock (@prod.Stock)</span>
-                                    }
-                                </td>
-                                <td class="py-3 text-right">
-                                    <form asp-action="DeleteProduct" method="post" onsubmit="return confirm('Delete product?');">
-                                        <input type="hidden" name="id" value="@prod.Id" />
-                                        <button type="submit" class="text-rose-500 hover:text-rose-700 bg-rose-50 px-3 py-1.5 rounded-xl font-bold text-xs"><i class="fa-solid fa-trash-can"></i></button>
+                            <tr>
+                                <td class="py-4 font-bold">@o.CustomerName</td>
+                                <td class="py-4"><span class="block">@o.Phone</span><span class="text-xs text-slate-400">@o.Address</span></td>
+                                <td class="py-4 font-extrabold text-emerald-600">₹@o.TotalAmount.ToString("0.00")</td>
+                                <td class="py-4">
+                                    <form asp-action="UpdateOrderStatus" method="post">
+                                        <input type="hidden" name="id" value="@o.Id" />
+                                        <select name="status" onchange="this.form.submit()" class="bg-slate-100 border rounded-xl px-3 py-1 text-xs font-bold">
+                                            <option value="Processing" selected="@(o.Status == "Processing")">Processing</option>
+                                            <option value="Out for Delivery" selected="@(o.Status == "Out for Delivery")">Out for Delivery</option>
+                                            <option value="Completed" selected="@(o.Status == "Completed")">Completed</option>
+                                            <option value="Cancelled" selected="@(o.Status == "Cancelled")">Cancelled</option>
+                                        </select>
                                     </form>
                                 </td>
                             </tr>
@@ -182,6 +106,47 @@
             </div>
         </div>
 
+        <!-- Coupon Manager & Product Manager -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Coupons -->
+            <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-4">
+                <h3 class="text-lg font-extrabold">Promo Coupons Management</h3>
+                <form asp-action="AddCoupon" method="post" class="space-y-3">
+                    <input type="text" name="Code" required placeholder="Code (e.g. QUICK10)" class="w-full bg-slate-100 rounded-2xl py-2.5 px-4 text-sm uppercase" />
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" name="DiscountPercent" required placeholder="Discount %" class="bg-slate-100 rounded-2xl py-2.5 px-3 text-sm" />
+                        <input type="number" name="MinOrderAmount" required placeholder="Min Order ₹" class="bg-slate-100 rounded-2xl py-2.5 px-3 text-sm" />
+                    </div>
+                    <button type="submit" class="w-full bg-slate-900 text-white py-3 rounded-2xl font-bold">Create Coupon</button>
+                </form>
+                <div class="space-y-2 mt-4 max-h-[180px] overflow-y-auto">
+                    @foreach (var c in coupons)
+                    {
+                        <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl text-xs font-bold">
+                            <span>@c.Code (@c.DiscountPercent% off, min ₹@c.MinOrderAmount)</span>
+                            <form asp-action="DeleteCoupon" method="post"><input type="hidden" name="id" value="@c.Id" /><button class="text-rose-500"><i class="fa-solid fa-trash"></i></button></form>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Add Product -->
+            <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+                <h3 class="text-lg font-extrabold mb-4">Add Product (Stock, Description & Image)</h3>
+                <form asp-action="AddProduct" method="post" enctype="multipart/form-data" class="space-y-3">
+                    <input type="text" name="Name" required placeholder="Product Name" class="w-full bg-slate-100 rounded-2xl py-2.5 px-4 text-sm" />
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="text" name="Category" required placeholder="Category" class="bg-slate-100 rounded-2xl py-2.5 px-3 text-sm" />
+                        <input type="number" step="0.01" name="Price" required placeholder="Price" class="bg-slate-100 rounded-2xl py-2.5 px-3 text-sm" />
+                        <input type="number" name="Stock" required placeholder="Stock Qty" class="bg-slate-100 rounded-2xl py-2.5 px-3 text-sm" />
+                    </div>
+                    <input type="text" name="imageUrlInput" placeholder="Online Image URL (Optional)" class="w-full bg-slate-100 rounded-2xl py-2.5 px-4 text-sm" />
+                    <input type="file" name="imageFile" class="w-full text-xs text-slate-500" />
+                    <textarea name="Description" rows="2" placeholder="Product Description..." class="w-full bg-slate-100 rounded-2xl py-2 px-4 text-sm"></textarea>
+                    <button type="submit" class="w-full bg-emerald-600 text-white py-3 rounded-2xl font-bold">Save Product</button>
+                </form>
+            </div>
+        </div>
     </main>
 </body>
 </html>

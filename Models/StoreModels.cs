@@ -12,7 +12,6 @@ namespace GroceryStoreApp.Models
         public string Unit { get; set; } = "1 kg";
         public string ImageUrl { get; set; } = string.Empty;
         public double Rating { get; set; } = 4.8;
-        public int SalesCount { get; set; } = 0; // For Popularity sorting algorithm
         public string Description { get; set; } = string.Empty;
     }
 
@@ -30,7 +29,7 @@ namespace GroceryStoreApp.Models
         public int Id { get; set; }
         public int UserId { get; set; }
         public string Label { get; set; } = "Home"; // Home, Office, Other
-        public string AddressText { get; set; } = string.Empty;
+        public string FullAddress { get; set; } = string.Empty;
     }
 
     public class OrderViewModel
@@ -41,10 +40,11 @@ namespace GroceryStoreApp.Models
         public string Phone { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
         public decimal TotalAmount { get; set; }
+        public string CouponCode { get; set; } = string.Empty;
         public decimal DiscountAmount { get; set; }
         public string CartDataJson { get; set; } = string.Empty;
-        public string Status { get; set; } = "Processing"; // Processing -> Out for Delivery -> Completed
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string Status { get; set; } = "Processing"; // Processing -> Out for Delivery -> Completed -> Cancelled
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 
     public class Coupon
@@ -55,14 +55,14 @@ namespace GroceryStoreApp.Models
         public decimal MinOrderAmount { get; set; }
     }
 
-    public class WishlistItem
+    public class VisitorLog
     {
         public int Id { get; set; }
-        public int UserId { get; set; }
-        public int ProductId { get; set; }
+        public DateTime VisitTime { get; set; } = DateTime.Now;
+        public string IpAddress { get; set; } = string.Empty;
     }
 
-    // --- ALGORITHMIC TRIE FOR INSTANT PREFIX SEARCH ---
+    // --- HIGH-PERFORMANCE TRIE SEARCH ALGORITHM ---
     public class TrieNode
     {
         public Dictionary<char, TrieNode> Children { get; set; } = new();
@@ -73,10 +73,10 @@ namespace GroceryStoreApp.Models
     {
         private readonly TrieNode _root = new();
 
-        public void Insert(string name, int id)
+        public void Insert(string text, int id)
         {
             var current = _root;
-            foreach (var c in name.ToLower())
+            foreach (var c in text.ToLower())
             {
                 if (!current.Children.ContainsKey(c))
                     current.Children[c] = new TrieNode();
@@ -96,5 +96,12 @@ namespace GroceryStoreApp.Models
             }
             return current.ProductIds;
         }
+    }
+    
+    public class OperatingCity
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
     }
 }

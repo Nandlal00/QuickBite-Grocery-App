@@ -9,9 +9,10 @@ namespace GroceryStoreApp.Data
 
         public DbSet<Product> Products { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<SavedAddress> SavedAddresses { get; set; }
         public DbSet<OrderViewModel> Orders { get; set; }
         public DbSet<Coupon> Coupons { get; set; }
-        public DbSet<WishlistItem> WishlistItems { get; set; }
-        public DbSet<SavedAddress> SavedAddresses { get; set; } // Added this missing DbSet
+        public DbSet<VisitorLog> VisitorLogs { get; set; }
+        public DbSet<OperatingCity> OperatingCities { get; set; } //new DbSet for OperatingCity
     }
 }
