@@ -11,11 +11,13 @@ namespace GroceryStoreApp.Controllers
     public class HomeController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly EmailService _emailService;
         private static readonly ProductSearchTrie _searchTrie = new();
 
-        public HomeController(AppDbContext context)
+        public HomeController(AppDbContext context, EmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
             BuildTrieIndex();
         }
 
@@ -158,7 +160,7 @@ namespace GroceryStoreApp.Controllers
         }
 
         [HttpPost]
-        public IActionResult PlaceOrderAuthenticated([FromBody] OrderViewModel model)
+        public async Task<IActionResult> PlaceOrderAuthenticated([FromBody] OrderViewModel model)
         {
             if (!User.Identity?.IsAuthenticated ?? true) return Json(new { success = false, message = "Authentication required." });
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -182,7 +184,37 @@ namespace GroceryStoreApp.Controllers
             _context.Orders.Add(model);
             _context.SaveChanges();
 
+            // Safe PDF Invoice & Email dispatch wrapped in try-catch so it never blocks checkout
+            try
+            {
+                var user = _context.Users.Find(userId);
+                if (user != null && !string.IsNullOrEmpty(user.Email))
+                {
+                    var pdfBytes = PdfInvoiceService.GenerateInvoice(model, user.Email);
+                    _ = _emailService.SendOrderConfirmationEmailAsync(user.Email, model, pdfBytes);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Background PDF/Email generation warning: {ex.Message}");
+            }
+
             return Json(new { success = true, orderId });
+        }
+
+        [HttpGet]
+        public IActionResult DownloadInvoice(int id)
+        {
+            if (!User.Identity?.IsAuthenticated ?? true) return Unauthorized();
+            var order = _context.Orders.Find(id);
+            if (order == null) return NotFound();
+
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var user = _context.Users.Find(userId);
+            string email = user?.Email ?? "customer@quickbite.com";
+
+            var pdfBytes = PdfInvoiceService.GenerateInvoice(order, email);
+            return File(pdfBytes, "application/pdf", $"QuickBite_Tax_Invoice_{order.Id}.pdf");
         }
 
         [HttpPost]
@@ -199,18 +231,5 @@ namespace GroceryStoreApp.Controllers
             _context.SaveChanges();
             return Json(new { success = true, message = "Order successfully cancelled." });
         }
-
-        [HttpGet]
-        public IActionResult GetActiveOperatingCities()
-        {
-            var cities = _context.OperatingCities.Where(c => c.IsActive).Select(c => c.Name).ToList();
-            return Json(cities);
-        }
-    }
-
-    public class CartItemDto
-    {
-        public int Id { get; set; }
-        public int Qty { get; set; }
     }
 }

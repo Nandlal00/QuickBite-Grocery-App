@@ -2,7 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using GroceryStoreApp.Data;
 
+// ... existing code ...
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddControllersWithViews();
+builder.Services.AddTransient<GroceryStoreApp.Models.EmailService>(); // <-- ADD THIS LINE
 
 // Add services with Razor Runtime Compilation for instant hot reload
 builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();

@@ -13,6 +13,6 @@ namespace GroceryStoreApp.Data
         public DbSet<OrderViewModel> Orders { get; set; }
         public DbSet<Coupon> Coupons { get; set; }
         public DbSet<VisitorLog> VisitorLogs { get; set; }
-        public DbSet<OperatingCity> OperatingCities { get; set; } //new DbSet for OperatingCity
+        public DbSet<OperatingCity> OperatingCities { get; set; }
     }
 }
